@@ -1,36 +1,39 @@
 package com.hellointerview.service.tickets;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.hellointerview.service.billing.BillingSystem;
+import com.hellointerview.models.Spot;
 import com.hellointerview.service.tickets.models.Ticket;
 
 public class TicketSystem {
 
-    private Integer currentTicketId = 0;
     private List<Ticket> tickets = new ArrayList<>();
 
-    public Ticket issueNewTicket() {
-        Integer nextTicketId = currentTicketId + 1;
-        Ticket newTicket = new Ticket(nextTicketId);
-        tickets.add(newTicket);
-        currentTicketId = nextTicketId;
+    public Ticket issueTicket(Instant instant, Spot spot) {
+        Ticket ticket = new Ticket(tickets.size() + 1, instant, spot);
+        tickets.add(ticket);
 
-        return newTicket;
+        return ticket;
     }
 
-    public void addTicket(Ticket ticket) {
-        tickets.add(issueNewTicket());
-    }
-
-    public Ticket getTicket(Integer ticketId) {
+    public Ticket getOpenTicket(int ticketId) {
         Ticket ticket = tickets.stream()
-            .filter(t -> ticketId.equals(t.getId()))
+            .filter(t -> ticketId == t.getId() && t.isOpen())
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Ticket not found: " + ticketId));
         
         validate(ticket);
+
+        return ticket;
+    }
+
+    public Ticket getClosedTicket(int ticketId) {
+        Ticket ticket = tickets.stream()
+            .filter(t -> ticketId == t.getId() && t.isClosed())
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("The closed ticket not found: " + ticketId));
 
         return ticket;
     }
@@ -41,7 +44,7 @@ public class TicketSystem {
 
     private void checkIfIsUsed(Ticket ticket) {
         if(ticket.getEndTime() != null) {
-            throw new IllegalArgumentException("Ticket is invalid: " + ticket.getId());
+            throw new IllegalStateException("Ticket is invalid: " + ticket.getId());
         }
     }
 }

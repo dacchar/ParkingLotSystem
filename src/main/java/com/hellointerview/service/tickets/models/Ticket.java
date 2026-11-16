@@ -1,38 +1,29 @@
 package com.hellointerview.service.tickets.models;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 import com.hellointerview.models.Spot;
 
-import lombok.Getter;
-import lombok.Setter;
-
-// @RequiredArgsConstructor
-// @Getter 
-// @Setter 
-// @ToString 
 public class Ticket {
-    private final Integer id;
-    private Instant startTime;
+    private final int id;
+    private final Instant startTime;
+    private final Spot spot;
     private Instant endTime;
-    private Spot spot;
-    private Double fee;
+    private BigDecimal fee;
 
-    public Ticket(Integer id) {
+    public Ticket(int id, Instant startTime, Spot spot) {
         this.id = id;
+        this.startTime = startTime;
+        this.spot = spot;
     }
 
-    public void open(Instant startTime, Spot spot)  {
-         this.startTime =  Instant.now();
-    }
-
-    public void close(Instant end, Double fee) {
-        this.endTime = Instant.now();
+    public void close(Instant end, BigDecimal fee) {
+        this.endTime = end;
         this.fee = fee;
-        this.spot = null;
     }
 
-    public Integer getId() {
+    public int getId() {
         return this.id;
     }
 
@@ -40,23 +31,7 @@ public class Ticket {
         return this.endTime;
     }
 
-    public void setStartTime(Instant startTime) {
-        this.startTime = startTime;
-    }
-
-    public void setEndTime(Instant endTime) {
-        this.endTime = endTime;
-    }
-
-    public void setSpot(Spot spot) {
-        this.spot = spot;
-    }
-
-    public void setFee(Double fee) {
-        this.fee = fee;
-    }
-
-    public Instant getStartTime() {
+        public Instant getStartTime() {
         return startTime;
     }
 
@@ -64,8 +39,16 @@ public class Ticket {
         return spot;
     }
 
-    public Double getFee() {
+    public BigDecimal getFee() {
         return fee;
+    }
+
+    public boolean isOpen() {
+        return this.endTime == null;
+    }
+
+    public boolean isClosed() {
+        return !isOpen();
     }
 
     @Override

@@ -4,5 +4,4 @@ public enum SpotType {
     CAR,
     LARGE_VEHICLE,
     MOTORCYCLE
-   
 }

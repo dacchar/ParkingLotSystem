@@ -1,88 +1,66 @@
 package com.hellointerview;
 
+import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import com.hellointerview.models.Car;
-import com.hellointerview.models.LargeVehicle;
-import com.hellointerview.models.Motorcycle;
 import com.hellointerview.models.Spot;
 import com.hellointerview.models.Vehicle;
 import com.hellointerview.service.billing.BillingSystem;
+import com.hellointerview.service.spotmanagement.SpotManager;
 import com.hellointerview.service.tickets.TicketSystem;
 import com.hellointerview.service.tickets.models.Ticket;
 
 public class ParkingLotSystem {
 
-    private List<Spot> carSpots = new ArrayList<>();
-    private List<Spot> largeVehicleSpots = new ArrayList<>();
-    private List<Spot> motorcycleSpots = new ArrayList<>();
+    private final SpotManager spotManager;
+    private final TicketSystem ticketSystem;
+    private final BillingSystem billingSystem;
 
-    private TicketSystem ticketSystem;
-    private BillingSystem billingSystem;
-
-    public ParkingLotSystem(TicketSystem ticketSystem, BillingSystem billingSystem) {
+    public ParkingLotSystem(SpotManager spotManager, TicketSystem ticketSystem, BillingSystem billingSystem) {
+        this.spotManager = spotManager;
         this.ticketSystem = ticketSystem;
         this.billingSystem = billingSystem;
     }
 
-    public void fillCarSpots(List<Spot> spots) {
-        fillSpots(spots, carSpots);
+    public synchronized void fillSpots(List<Spot> spots) {
+        spotManager.fillSpots(spots);
     }
 
-    public void fillLargeVehicleSpots(List<Spot> spots) {
-        fillSpots(spots, largeVehicleSpots);
+    public synchronized Optional<Integer> enterVehicle(Vehicle vehicle) {
+        return enterVehicle(vehicle, Instant.now());
     }
 
-    public void fillMotorcycleSpots(List<Spot> spots) {
-        fillSpots(spots, motorcycleSpots);
+    public synchronized Optional<Integer> enterVehicle(Vehicle vehicle, Instant instant) {
+
+        return spotManager
+                .allocate(vehicle)
+                .map(spot -> {
+                    Ticket ticket = ticketSystem.issueTicket(instant, spot);
+                    return ticket.getId();
+                });
     }
 
-    private void fillSpots(List<Spot> spots, List<Spot> target) {
-        target.addAll(spots);
+    public synchronized BigDecimal leaveVehicle(int ticketId) {
+        return leaveVehicle(ticketId, Instant.now());
     }
 
-    public Optional<Integer> enterCar(Car car) {
-        return enterVehicle(car, carSpots);
+    public synchronized BigDecimal leaveVehicle(int ticketId, Instant endTime) {
+        Ticket ticket = ticketSystem.getOpenTicket(ticketId);
+        ticket.close(
+            endTime,
+            billingSystem.calculateFee(ticket.getStartTime(), endTime)
+        );
+        spotManager.vacate(ticket.getSpot());
+        
+        return ticket.getFee();
     }
 
-    public Optional<Integer> enterLargeVehicle(LargeVehicle largeVehicle) {
-        return enterVehicle(largeVehicle, largeVehicleSpots);
-    }
-
-    public Optional<Integer> enterMotorcycle(Motorcycle motorcycle) {
-        return enterVehicle(motorcycle, motorcycleSpots);
-    }
-
-    private Optional<Integer> enterVehicle(Vehicle vehicle, List<Spot> spots) {
-        return spots.stream()
-            .filter(s -> s.isFree())
-            .findFirst()
-            .map(spot -> {
-                spot.park(vehicle);
-                Ticket ticket = ticketSystem.issueNewTicket();
-                ticket.open(Instant.now(), spot);
-
-                return ticket.getId();
-            });
-    }
-
-    public double leaveVehicle(Integer ticketId) {
-        Ticket ticket = ticketSystem.getTicket(ticketId);
-        double fee = billingSystem.calculateFee(ticket);
-        ticket.close(Instant.now(), fee);
-
-        return fee;
-    }
-
-    public Double getFee(Integer ticketId) {
-        return ticketSystem.getTicket(ticketId).getFee();
+    public synchronized BigDecimal getFee(int ticketId) {
+        return ticketSystem.getClosedTicket(ticketId).getFee();
     }
 
     public static void main(String[] args) {
-        Integer foo = 77;
-        System.out.println(foo);
         System.out.println("Hello, World!");
     }
 }
